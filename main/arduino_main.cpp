@@ -75,6 +75,7 @@ void loop() {
             delay(10000);
             digitalWrite(LED, LOW);
             delay(10000);
+    int z = 0;
     for (int i = 0; i < BP32_MAX_GAMEPADS; i++) {
         GamepadPtr myGamepad = myGamepads[i];
         if (myGamepad && myGamepad->isConnected()) {
