@@ -25,6 +25,7 @@ limitations under the License.
 #include <ESP32Servo.h>
 #include <ESP32SharpIR.h>
 #include <QTRSensors.h>
+#define LED 2
 
 GamepadPtr myGamepads[BP32_MAX_GAMEPADS];
 
@@ -58,21 +59,27 @@ void setup() {
     BP32.forgetBluetoothKeys();
 
     ESP32PWM::allocateTimer(0);
-	ESP32PWM::allocateTimer(1);
-	ESP32PWM::allocateTimer(2);
-	ESP32PWM::allocateTimer(3);
+    ESP32PWM::allocateTimer(1);
+    ESP32PWM::allocateTimer(2);
+    ESP32PWM::allocateTimer(3);
 
     // TODO: Write your setup code here
+    //pinMode(LED, INPUT);
+    pinMode (LED, OUTPUT);
 }
 
 // Arduino loop function. Runs in CPU 1
 void loop() {
     BP32.update();
-
+            digitalWrite(LED, HIGH);
+            delay(10000);
+            digitalWrite(LED, LOW);
+            delay(10000);
     for (int i = 0; i < BP32_MAX_GAMEPADS; i++) {
         GamepadPtr myGamepad = myGamepads[i];
         if (myGamepad && myGamepad->isConnected()) {
             // TODO: Write your controller code here
+            
 
         }
     }
