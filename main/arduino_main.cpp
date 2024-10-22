@@ -13,6 +13,7 @@
 #include <ESP32Servo.h>
 #include <bits/stdc++.h>
 #include <Arduino_APDS9960.h>
+#include <QTRSensors.h>
 
 #define LED 2
 #define IN1R 12
@@ -31,6 +32,9 @@ APDS9960 sensor = APDS9960(I2C_0, APDS9960_INT);
 Servo servo;
 
 GamepadPtr myGamepads[BP32_MAX_GAMEPADS];
+
+QTRSensors qtr;
+uint16_t sensors[3];
 
 // This callback gets called any time a new gamepad is connected.
 void onConnectedGamepad(GamepadPtr gp) {
@@ -71,6 +75,14 @@ void setup() {
     I2C_0.begin(I2C_SDA, I2C_SCL, I2C_FREQ);
     sensor.setInterruptPin(APDS9960_INT);
     sensor.begin();
+
+    qtr.setTypeAnalog();
+    qtr.setSensorPins((const uint8_t[]) {0,4,27,32,33},5);
+    for (uint8_t i = 0; i<250; i++) {
+        Serial.println("calibrating");
+        qtr.calibrate();
+        delay(20);
+    }
 
     Serial.begin(115200);
 }
@@ -115,7 +127,7 @@ void loop() {
                 digitalWrite(IN1L, LOW);
                 digitalWrite(IN2L, HIGH);
             }
-             if(controller->axisRX() < 0) { // negative y is downward on stick
+            if(controller->axisRX() < 0) { // negative y is downward on stick
                 Serial.println(" DC motor rotate counterclockwise");
                 digitalWrite(IN1R, LOW);
                 digitalWrite(IN2R, HIGH);
@@ -180,6 +192,19 @@ void loop() {
             }
         }
     }
+
+    int16_t position = qtr.readLineBlack(sensors);
+    qtr.readLineBlack(sensors); // Get calibrated sensor values returned in the sensors array
+    Serial.print(sensors[0]);
+    Serial.print(" ");
+    Serial.print(sensors[1]);
+    Serial.print(" ");
+    Serial.println(sensors[2]);
+    Serial.print(" ");
+    Serial.println(sensors[3]);
+    Serial.print(" ");
+    Serial.println(sensors[4]);
+    delay(2000);
     
     vTaskDelay(1);
 }           
