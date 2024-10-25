@@ -34,7 +34,7 @@ Servo servo;
 GamepadPtr myGamepads[BP32_MAX_GAMEPADS];
 
 QTRSensors qtr;
-uint16_t sensors[3];
+uint16_t sensors[5];
 
 // This callback gets called any time a new gamepad is connected.
 void onConnectedGamepad(GamepadPtr gp) {
@@ -141,10 +141,11 @@ void loop() {
                 digitalWrite(IN1L, LOW);
                 digitalWrite(IN2L, LOW);
             }
-            
+            /**
             while(!sensor.colorAvailable()) {
                 delay(5);
             }
+            **/
     
             int r, g, b, a;
             sensor.readColor(r, g, b, a);
@@ -193,18 +194,21 @@ void loop() {
         }
     }
 
+
     int16_t position = qtr.readLineBlack(sensors);
+
     qtr.readLineBlack(sensors); // Get calibrated sensor values returned in the sensors array
     Serial.print(sensors[0]);
     Serial.print(" ");
     Serial.print(sensors[1]);
     Serial.print(" ");
-    Serial.println(sensors[2]);
+    Serial.print(sensors[2]);
     Serial.print(" ");
-    Serial.println(sensors[3]);
+    Serial.print(sensors[3]);
     Serial.print(" ");
     Serial.println(sensors[4]);
     delay(2000);
+
     
     vTaskDelay(1);
 }           
