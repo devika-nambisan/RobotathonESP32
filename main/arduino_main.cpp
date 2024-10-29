@@ -36,6 +36,12 @@ GamepadPtr myGamepads[BP32_MAX_GAMEPADS];
 QTRSensors qtr;
 uint16_t sensors[5];
 
+bool wallAuto = false;
+bool lineAuto = false;
+bool latchA = false;
+int calibrateCounter = 0;
+int test[5];
+
 // This callback gets called any time a new gamepad is connected.
 void onConnectedGamepad(GamepadPtr gp) {
     bool foundEmptySlot = false;
@@ -59,6 +65,13 @@ void onDisconnectedGamepad(GamepadPtr gp) {
     }
 }
 
+void lineSensorCalibrate() {
+    for (uint8_t i = 0; i<250; i++) {
+        Serial.println("calibrating");
+        qtr.calibrate();
+    }
+}
+
 void setup() {
     BP32.setup(&onConnectedGamepad, &onDisconnectedGamepad);
     BP32.forgetBluetoothKeys();
@@ -78,11 +91,6 @@ void setup() {
 
     qtr.setTypeAnalog();
     qtr.setSensorPins((const uint8_t[]) {0,4,27,32,33},5);
-    for (uint8_t i = 0; i<250; i++) {
-        Serial.println("calibrating");
-        qtr.calibrate();
-        delay(20);
-    }
 
     Serial.begin(115200);
 }
@@ -92,123 +100,170 @@ void loop() {
     for (int i = 0; i < BP32_MAX_GAMEPADS; i++) {
         GamepadPtr controller = myGamepads[i];
         if (controller && controller->isConnected()) {
-           
-            if (controller->l1() == 1) {
-                Serial.print("Servo up");
-                servo.write(1000);
-            }
-            if (controller->r1() == 1) {
-                Serial.print("Servo down");
-                servo.write(2000);
-            }
-            if (controller->l1() == 0 && controller->r1() == 0) {
-                Serial.print("Servo stop");
-                servo.write(1500);
-            }
+            if (!lineAuto && !wallAuto) {
+                if (controller->l1() == 1) {
+                    Serial.print("Servo up");
+                    servo.write(1000);
+                }
+                if (controller->r1() == 1) {
+                    Serial.print("Servo down");
+                    servo.write(2000);
+                }
+                if (controller->l1() == 0 && controller->r1() == 0) {
+                    Serial.print("Servo stop");
+                    servo.write(1500);
+                }
 
-            if(controller->axisRY() > 0) { // negative y is upward on stick
-                Serial.println(" DC motor move forward");
-                digitalWrite(IN1R, LOW);
-                digitalWrite(IN2R, HIGH);
-                digitalWrite(IN1L, LOW);
-                digitalWrite(IN2L, HIGH);
-            }
-             if(controller->axisRY() < 0) { // negative y is downward on stick
-                Serial.println(" DC motor move backward");
-                digitalWrite(IN1R, HIGH);
-                digitalWrite(IN2R, LOW);
-                digitalWrite(IN1L, HIGH);
-                digitalWrite(IN2L, LOW);
-            }
-            if(controller->axisRX() > 0) { // negative y is upward on stick
-                Serial.println(" DC motor rotate clockwise");
-                digitalWrite(IN1R, HIGH);
-                digitalWrite(IN2R, LOW);
-                digitalWrite(IN1L, LOW);
-                digitalWrite(IN2L, HIGH);
-            }
-            if(controller->axisRX() < 0) { // negative y is downward on stick
-                Serial.println(" DC motor rotate counterclockwise");
-                digitalWrite(IN1R, LOW);
-                digitalWrite(IN2R, HIGH);
-                digitalWrite(IN1L, HIGH);
-                digitalWrite(IN2L, LOW);
-            }
-            if(controller->axisRY() == 0 && controller->axisRX() == 0) { // stop motor 1
-                Serial.println(" DC motor stop");
-                digitalWrite(IN1R, LOW);
-                digitalWrite(IN2R, LOW);
-                digitalWrite(IN1L, LOW);
-                digitalWrite(IN2L, LOW);
+                if(controller->axisRY() > 0) { // negative y is upward on stick
+                    Serial.println(" DC motor move forward");
+                    digitalWrite(IN1R, LOW);
+                    digitalWrite(IN2R, HIGH);
+                    digitalWrite(IN1L, LOW);
+                    digitalWrite(IN2L, HIGH);
+                }
+                if(controller->axisRY() < 0) { // negative y is downward on stick
+                    Serial.println(" DC motor move backward");
+                    digitalWrite(IN1R, HIGH);
+                    digitalWrite(IN2R, LOW);
+                    digitalWrite(IN1L, HIGH);
+                    digitalWrite(IN2L, LOW);
+                }
+                if(controller->axisRX() > 0) { // negative y is upward on stick
+                    Serial.println(" DC motor rotate clockwise");
+                    digitalWrite(IN1R, HIGH);
+                    digitalWrite(IN2R, LOW);
+                    digitalWrite(IN1L, LOW);
+                    digitalWrite(IN2L, HIGH);
+                }
+                if(controller->axisRX() < 0) { // negative y is downward on stick
+                    Serial.println(" DC motor rotate counterclockwise");
+                    digitalWrite(IN1R, LOW);
+                    digitalWrite(IN2R, HIGH);
+                    digitalWrite(IN1L, HIGH);
+                    digitalWrite(IN2L, LOW);
+                }
+                if(controller->axisRY() == 0 && controller->axisRX() == 0) { // stop motor 1
+                    Serial.println(" DC motor stop");
+                    digitalWrite(IN1R, LOW);
+                    digitalWrite(IN2R, LOW);
+                    digitalWrite(IN1L, LOW);
+                    digitalWrite(IN2L, LOW);
+                }
             }
             /**
             while(!sensor.colorAvailable()) {
                 delay(5);
             }
             **/
-    
-            int r, g, b, a;
-            sensor.readColor(r, g, b, a);
+            
+            // int r, g, b, a;
+            // sensor.readColor(r, g, b, a);
 
-            Serial.print("r = ");
-            Serial.print(r);
-            Serial.print("g = ");
-            Serial.print(g);
-            Serial.print("b = ");
-            Serial.println(b);
+            // Serial.print("r = ");
+            // Serial.print(r);
+            // Serial.print("g = ");
+            // Serial.print(g);
+            // Serial.print("b = ");
+            // Serial.println(b);
 
-            // PHYSICAL BUTTON A
-            if (controller->b()) {
-                Serial.println("Color sensing");
-                if (r - g > 40 && r - b > 40) {
-                    Serial.println("Red");
-                    digitalWrite(LED, HIGH);
-                    delay(2000);
-                    digitalWrite(LED, LOW);
+            // // PHYSICAL BUTTON A
+            // if (controller->b()) {
+            //     Serial.println("Color sensing");
+            //     if (r - g > 40 && r - b > 40) {
+            //         Serial.println("Red");
+            //         digitalWrite(LED, HIGH);
+            //         delay(2000);
+            //         digitalWrite(LED, LOW);
+            //     }
+            //     else if (b - r > 40 && b - g > 40) {
+            //         Serial.println("Blue");
+            //         digitalWrite(LED, HIGH);
+            //         delay(1000);
+            //         digitalWrite(LED, LOW);
+            //         delay(250);
+            //         digitalWrite(LED, HIGH);
+            //         delay(1000);
+            //         digitalWrite(LED, LOW);
+            //     }
+            //     else if (g - r > 40 && g - b > 40) {
+            //         Serial.println("Green");
+            //         digitalWrite(LED, HIGH);
+            //         delay(500);
+            //         digitalWrite(LED, LOW);
+            //         delay(250);
+            //         digitalWrite(LED, HIGH);
+            //         delay(500);
+            //         digitalWrite(LED, LOW);
+            //         delay(250);
+            //         digitalWrite(LED, HIGH);
+            //         delay(500);
+            //         digitalWrite(LED, LOW);
+            //     }
+            // }
+            if (controller->a() && !latchA) {
+                latchA = true;
+                lineAuto = !lineAuto;
+            }
+            else if (!controller->a() && latchA) {
+                latchA = false;
+            }
+            if (!lineAuto) {
+                lineAuto = false;
+                calibrateCounter = 0;
+                Serial.println(" DC motor stop");
+                digitalWrite(IN1R, LOW);
+                digitalWrite(IN2R, LOW);
+                digitalWrite(IN1L, LOW);
+                digitalWrite(IN2L, LOW);
+            }
+            if (lineAuto) {
+                if (calibrateCounter % 200 == 0) {
+                    lineSensorCalibrate();
                 }
-                else if (b - r > 40 && b - g > 40) {
-                    Serial.println("Blue");
-                    digitalWrite(LED, HIGH);
-                    delay(1000);
-                    digitalWrite(LED, LOW);
-                    delay(250);
-                    digitalWrite(LED, HIGH);
-                    delay(1000);
-                    digitalWrite(LED, LOW);
-                }
-                else if (g - r > 40 && g - b > 40) {
-                    Serial.println("Green");
-                    digitalWrite(LED, HIGH);
-                    delay(500);
-                    digitalWrite(LED, LOW);
-                    delay(250);
-                    digitalWrite(LED, HIGH);
-                    delay(500);
-                    digitalWrite(LED, LOW);
-                    delay(250);
-                    digitalWrite(LED, HIGH);
-                    delay(500);
-                    digitalWrite(LED, LOW);
-                }
+                calibrateCounter++;
+                int16_t position = qtr.readLineBlack(sensors);
+                qtr.readLineBlack(sensors); // Get calibrated sensor values returned in the sensors array
+                
+                Serial.print(sensors[0] - test[0]);
+                Serial.print(" ");
+                Serial.print(sensors[1] - test[1]);
+                Serial.print(" ");
+                Serial.print(sensors[2] - test[2]);
+                Serial.print(" ");
+                Serial.print(sensors[3] - test[3]);
+                Serial.print(" ");
+                Serial.println(sensors[4] - test[4]);
+
+                test[0] = sensors[0];
+                test[1] = sensors[1];
+                test[2] = sensors[2];
+                test[3] = sensors[3];
+                test[4] = sensors[4];
+                delay(100);
+                // if (sensors[0] > 800 && sensors[1] < 800 && sensors[2] > 800 && sensors[3] > 800 && sensors[4] == 800) {
+                //     Serial.println(" DC motor move forward");
+                //     digitalWrite(IN1R, LOW);
+                //     digitalWrite(IN2R, HIGH);
+                //     digitalWrite(IN1L, LOW);
+                //     digitalWrite(IN2L, HIGH);
+                // }
+                // else if (sensors[0] < 800 && sensors[1] < 800 && sensors[2] < 800 && sensors[3] > 800 && sensors[4] > 800) {
+                //     Serial.println(" DC motor rotate clockwise");
+                //     digitalWrite(IN1R, HIGH);
+                //     digitalWrite(IN2R, LOW);
+                //     digitalWrite(IN1L, LOW);
+                //     digitalWrite(IN2L, HIGH);
+                // }
+                // else if (sensors[0] > 800 && sensors[1] > 800 && sensors[2] < 800 && sensors[3] < 800 && sensors[4] < 800) {
+                //     Serial.println(" DC motor rotate counterclockwise");
+                //     digitalWrite(IN1R, LOW);
+                //     digitalWrite(IN2R, HIGH);
+                //     digitalWrite(IN1L, HIGH);
+                //     digitalWrite(IN2L, LOW);
+                // }
             }
         }
     }
-
-
-    int16_t position = qtr.readLineBlack(sensors);
-
-    qtr.readLineBlack(sensors); // Get calibrated sensor values returned in the sensors array
-    Serial.print(sensors[0]);
-    Serial.print(" ");
-    Serial.print(sensors[1]);
-    Serial.print(" ");
-    Serial.print(sensors[2]);
-    Serial.print(" ");
-    Serial.print(sensors[3]);
-    Serial.print(" ");
-    Serial.println(sensors[4]);
-    delay(2000);
-
     
     vTaskDelay(1);
 }           
