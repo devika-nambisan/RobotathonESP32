@@ -234,33 +234,43 @@ void loop() {
                 Serial.print(" ");
                 Serial.println(sensors[4] - test[4]);
 
+                Serial.print(sensors[0]);
+                Serial.print(" ");
+                Serial.print(sensors[1]);
+                Serial.print(" ");
+                Serial.print(sensors[2]);
+                Serial.print(" ");
+                Serial.print(sensors[3]);
+                Serial.print(" ");
+                Serial.println(sensors[4]);
+
+                delay(1000);
+                if (abs(sensors[4] - test[4]) > 800) {
+                    Serial.println(" DC motor rotate clockwise");
+                    // digitalWrite(IN1R, HIGH);
+                    // digitalWrite(IN2R, LOW);
+                    // digitalWrite(IN1L, LOW);
+                    // digitalWrite(IN2L, HIGH);
+                }
+                else if (abs(sensors[0] - test[0]) > 800) {
+                    Serial.println(" DC motor rotate counterclockwise");
+                    // digitalWrite(IN1R, LOW);
+                    // digitalWrite(IN2R, HIGH);
+                    // digitalWrite(IN1L, HIGH);
+                    // digitalWrite(IN2L, LOW);
+                }
+                else {
+                    Serial.println(" DC motor move forward");
+                    // digitalWrite(IN1R, LOW);
+                    // digitalWrite(IN2R, HIGH);
+                    // digitalWrite(IN1L, LOW);
+                    // digitalWrite(IN2L, HIGH);
+                }
                 test[0] = sensors[0];
                 test[1] = sensors[1];
                 test[2] = sensors[2];
                 test[3] = sensors[3];
                 test[4] = sensors[4];
-                delay(100);
-                // if (sensors[0] > 800 && sensors[1] < 800 && sensors[2] > 800 && sensors[3] > 800 && sensors[4] == 800) {
-                //     Serial.println(" DC motor move forward");
-                //     digitalWrite(IN1R, LOW);
-                //     digitalWrite(IN2R, HIGH);
-                //     digitalWrite(IN1L, LOW);
-                //     digitalWrite(IN2L, HIGH);
-                // }
-                // else if (sensors[0] < 800 && sensors[1] < 800 && sensors[2] < 800 && sensors[3] > 800 && sensors[4] > 800) {
-                //     Serial.println(" DC motor rotate clockwise");
-                //     digitalWrite(IN1R, HIGH);
-                //     digitalWrite(IN2R, LOW);
-                //     digitalWrite(IN1L, LOW);
-                //     digitalWrite(IN2L, HIGH);
-                // }
-                // else if (sensors[0] > 800 && sensors[1] > 800 && sensors[2] < 800 && sensors[3] < 800 && sensors[4] < 800) {
-                //     Serial.println(" DC motor rotate counterclockwise");
-                //     digitalWrite(IN1R, LOW);
-                //     digitalWrite(IN2R, HIGH);
-                //     digitalWrite(IN1L, HIGH);
-                //     digitalWrite(IN2L, LOW);
-                // }
             }
         }
     }
