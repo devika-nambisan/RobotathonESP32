@@ -39,8 +39,8 @@ uint16_t sensors[5];
 bool wallAuto = false;
 bool lineAuto = false;
 bool latchA = false;
-int calibrateCounter = 0;
-int test[5];
+int lineAverage[5];
+bool lineAverageCalibrated = false;
 
 // This callback gets called any time a new gamepad is connected.
 void onConnectedGamepad(GamepadPtr gp) {
@@ -65,13 +65,6 @@ void onDisconnectedGamepad(GamepadPtr gp) {
     }
 }
 
-void lineSensorCalibrate() {
-    for (uint8_t i = 0; i<250; i++) {
-        Serial.println("calibrating");
-        qtr.calibrate();
-    }
-}
-
 void setup() {
     BP32.setup(&onConnectedGamepad, &onDisconnectedGamepad);
     BP32.forgetBluetoothKeys();
@@ -90,7 +83,7 @@ void setup() {
     sensor.begin();
 
     qtr.setTypeAnalog();
-    qtr.setSensorPins((const uint8_t[]) {0,4,27,32,33},5);
+    qtr.setSensorPins((const uint8_t[]) {35,4,27,32,33},5);
 
     Serial.begin(115200);
 }
@@ -156,7 +149,7 @@ void loop() {
             }
             **/
             
-            // int r, g, b, a;
+            // int r, g, b, a;ay
             // sensor.readColor(r, g, b, a);
 
             // Serial.print("r = ");
@@ -207,9 +200,13 @@ void loop() {
             else if (!controller->a() && latchA) {
                 latchA = false;
             }
-            if (!lineAuto) {
+            Serial.println(latchA);
+            if (!lineAuto && latchA) {
                 lineAuto = false;
-                calibrateCounter = 0;
+                for (int i = 0; i < 5; i++) {
+                    lineAverage[i] = 0;
+                }
+                lineAverageCalibrated = false;
                 Serial.println(" DC motor stop");
                 digitalWrite(IN1R, LOW);
                 digitalWrite(IN2R, LOW);
@@ -217,22 +214,25 @@ void loop() {
                 digitalWrite(IN2L, LOW);
             }
             if (lineAuto) {
-                if (calibrateCounter % 200 == 0) {
-                    lineSensorCalibrate();
+                if (!lineAverageCalibrated) {
+                    for (uint8_t i = 0; i<250; i++) {
+                        Serial.println("calibrating");
+                        qtr.calibrate();
+                    }
+                    for (int i = 0; i < 10; i++) {
+                        int16_t position = qtr.readLineBlack(sensors);
+                        qtr.readLineBlack(sensors);
+                        for (int j = 0; j < 5; j++) {
+                            lineAverage[j] += sensors[j];
+                        }
+                    }
+                    for (int i = 0; i < 5; i++) {
+                        lineAverage[i] /= 10;
+                    }
+                    lineAverageCalibrated = true;
                 }
-                calibrateCounter++;
                 int16_t position = qtr.readLineBlack(sensors);
                 qtr.readLineBlack(sensors); // Get calibrated sensor values returned in the sensors array
-                
-                Serial.print(sensors[0] - test[0]);
-                Serial.print(" ");
-                Serial.print(sensors[1] - test[1]);
-                Serial.print(" ");
-                Serial.print(sensors[2] - test[2]);
-                Serial.print(" ");
-                Serial.print(sensors[3] - test[3]);
-                Serial.print(" ");
-                Serial.println(sensors[4] - test[4]);
 
                 Serial.print(sensors[0]);
                 Serial.print(" ");
@@ -244,36 +244,41 @@ void loop() {
                 Serial.print(" ");
                 Serial.println(sensors[4]);
 
-                delay(1000);
-                if (abs(sensors[4] - test[4]) > 800) {
+                Serial.print(lineAverage[0]);
+                Serial.print(" ");
+                Serial.print(lineAverage[1]);
+                Serial.print(" ");
+                Serial.print(lineAverage[2]);
+                Serial.print(" ");
+                Serial.print(lineAverage[3]);
+                Serial.print(" ");
+                Serial.println(lineAverage[4]);
+
+                if (abs(sensors[4] - lineAverage[4]) > 75) {
                     Serial.println(" DC motor rotate clockwise");
-                    // digitalWrite(IN1R, HIGH);
-                    // digitalWrite(IN2R, LOW);
-                    // digitalWrite(IN1L, LOW);
-                    // digitalWrite(IN2L, HIGH);
+                    digitalWrite(IN1R, HIGH);
+                    digitalWrite(IN2R, LOW);
+                    digitalWrite(IN1L, LOW);
+                    digitalWrite(IN2L, HIGH);
+                    delay(1000);
                 }
-                else if (abs(sensors[0] - test[0]) > 800) {
+                else if (abs(sensors[0] - lineAverage[0]) > 75) {
                     Serial.println(" DC motor rotate counterclockwise");
-                    // digitalWrite(IN1R, LOW);
-                    // digitalWrite(IN2R, HIGH);
-                    // digitalWrite(IN1L, HIGH);
-                    // digitalWrite(IN2L, LOW);
+                    digitalWrite(IN1R, LOW);
+                    digitalWrite(IN2R, HIGH);
+                    digitalWrite(IN1L, HIGH);
+                    digitalWrite(IN2L, LOW);
+                    delay(1000);
                 }
                 else {
                     Serial.println(" DC motor move forward");
-                    // digitalWrite(IN1R, LOW);
-                    // digitalWrite(IN2R, HIGH);
-                    // digitalWrite(IN1L, LOW);
-                    // digitalWrite(IN2L, HIGH);
+                    digitalWrite(IN1R, LOW);
+                    digitalWrite(IN2R, HIGH);
+                    digitalWrite(IN1L, LOW);
+                    digitalWrite(IN2L, HIGH);
                 }
-                test[0] = sensors[0];
-                test[1] = sensors[1];
-                test[2] = sensors[2];
-                test[3] = sensors[3];
-                test[4] = sensors[4];
             }
         }
     }
-    
     vTaskDelay(1);
 }           
