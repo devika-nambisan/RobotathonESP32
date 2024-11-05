@@ -144,12 +144,12 @@ void loop() {
                 }
             }
             /**
-            while(!sensor.colorAvailable()) {
+            while(!sensor.colorAvailable()) { // color sensor
                 delay(5);
             }
             **/
             
-            // int r, g, b, a;ay
+            // int r, g, b, a;
             // sensor.readColor(r, g, b, a);
 
             // Serial.print("r = ");
@@ -193,7 +193,7 @@ void loop() {
             //         digitalWrite(LED, LOW);
             //     }
             // }
-            if (controller->a() && !latchA) {
+            if (controller->a() && !latchA) { // line sensor
                 latchA = true;
                 lineAuto = !lineAuto;
             }
