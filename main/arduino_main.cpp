@@ -20,6 +20,10 @@
 #define IN2R 14
 #define IN1L 13
 #define IN2L 15
+#define MOTORPWM 34
+#define WALL1 0
+#define WALL2 36
+#define WALL3 39
 
 #define APDS9960_INT 0 
 #define I2C_SDA 21
@@ -38,6 +42,7 @@ uint16_t sensors[5];
 
 bool wallAuto = false;
 bool lineAuto = false;
+bool latchX = false;
 bool latchA = false;
 int lineAverage[5];
 bool lineAverageCalibrated = false;
@@ -65,6 +70,46 @@ void onDisconnectedGamepad(GamepadPtr gp) {
     }
 }
 
+void moveForward() {
+    Serial.println("DC motor move forward");
+    digitalWrite(IN1R, LOW);
+    digitalWrite(IN2R, HIGH);
+    digitalWrite(IN1L, LOW);
+    digitalWrite(IN2L, HIGH);
+}
+
+void moveBackward() {
+    Serial.println("DC motor move backward");
+    digitalWrite(IN1R, HIGH);
+    digitalWrite(IN2R, LOW);
+    digitalWrite(IN1L, HIGH);
+    digitalWrite(IN2L, LOW);
+}
+
+void rotateClockwise() {
+    Serial.println("DC motor rotate clockwise");
+    digitalWrite(IN1R, HIGH);
+    digitalWrite(IN2R, LOW);
+    digitalWrite(IN1L, LOW);
+    digitalWrite(IN2L, HIGH);
+}
+
+void rotateCounterClockwise() {
+    Serial.println("DC motor rotate counterclockwise");
+    digitalWrite(IN1R, LOW);
+    digitalWrite(IN2R, HIGH);
+    digitalWrite(IN1L, HIGH);
+    digitalWrite(IN2L, LOW);
+}
+
+void stop() {
+    Serial.println("DC motor stop");
+    digitalWrite(IN1R, LOW);
+    digitalWrite(IN2R, LOW);
+    digitalWrite(IN1L, LOW);
+    digitalWrite(IN2L, LOW);
+}
+
 void setup() {
     BP32.setup(&onConnectedGamepad, &onDisconnectedGamepad);
     BP32.forgetBluetoothKeys();
@@ -77,6 +122,10 @@ void setup() {
     pinMode(IN1L, OUTPUT);
     pinMode(IN2L, OUTPUT);
     pinMode(LED, OUTPUT);
+    pinMode(MOTORPWM, OUTPUT);
+    pinMODE(WALL1, INPUT);
+    pinMODE(WALL2, INPUT);
+    pinMODE(WALL3, INPUT);
 
     I2C_0.begin(I2C_SDA, I2C_SCL, I2C_FREQ);
     sensor.setInterruptPin(APDS9960_INT);
@@ -108,39 +157,19 @@ void loop() {
                 }
 
                 if(controller->axisRY() > 0) { // negative y is upward on stick
-                    Serial.println(" DC motor move forward");
-                    digitalWrite(IN1R, LOW);
-                    digitalWrite(IN2R, HIGH);
-                    digitalWrite(IN1L, LOW);
-                    digitalWrite(IN2L, HIGH);
+                    moveForward();
                 }
                 if(controller->axisRY() < 0) { // negative y is downward on stick
-                    Serial.println(" DC motor move backward");
-                    digitalWrite(IN1R, HIGH);
-                    digitalWrite(IN2R, LOW);
-                    digitalWrite(IN1L, HIGH);
-                    digitalWrite(IN2L, LOW);
+                    moveBackward();
                 }
                 if(controller->axisRX() > 0) { // negative y is upward on stick
-                    Serial.println(" DC motor rotate clockwise");
-                    digitalWrite(IN1R, HIGH);
-                    digitalWrite(IN2R, LOW);
-                    digitalWrite(IN1L, LOW);
-                    digitalWrite(IN2L, HIGH);
+                    rotateClockwise();
                 }
                 if(controller->axisRX() < 0) { // negative y is downward on stick
-                    Serial.println(" DC motor rotate counterclockwise");
-                    digitalWrite(IN1R, LOW);
-                    digitalWrite(IN2R, HIGH);
-                    digitalWrite(IN1L, HIGH);
-                    digitalWrite(IN2L, LOW);
+                    rotateCounterClockwise();
                 }
                 if(controller->axisRY() == 0 && controller->axisRX() == 0) { // stop motor 1
-                    Serial.println(" DC motor stop");
-                    digitalWrite(IN1R, LOW);
-                    digitalWrite(IN2R, LOW);
-                    digitalWrite(IN1L, LOW);
-                    digitalWrite(IN2L, LOW);
+                    stop();
                 }
             }
             /**
@@ -207,11 +236,7 @@ void loop() {
                     lineAverage[i] = 0;
                 }
                 lineAverageCalibrated = false;
-                Serial.println(" DC motor stop");
-                digitalWrite(IN1R, LOW);
-                digitalWrite(IN2R, LOW);
-                digitalWrite(IN1L, LOW);
-                digitalWrite(IN2L, LOW);
+                stop();
             }
             if (lineAuto) {
                 if (!lineAverageCalibrated) {
@@ -220,7 +245,6 @@ void loop() {
                         qtr.calibrate();
                     }
                     for (int i = 0; i < 10; i++) {
-                        int16_t position = qtr.readLineBlack(sensors);
                         qtr.readLineBlack(sensors);
                         for (int j = 0; j < 5; j++) {
                             lineAverage[j] += sensors[j];
@@ -254,29 +278,32 @@ void loop() {
                 Serial.print(" ");
                 Serial.println(lineAverage[4]);
 
-                if (abs(sensors[4] - lineAverage[4]) > 75) {
-                    Serial.println(" DC motor rotate clockwise");
-                    digitalWrite(IN1R, HIGH);
-                    digitalWrite(IN2R, LOW);
-                    digitalWrite(IN1L, LOW);
-                    digitalWrite(IN2L, HIGH);
+                analogWrite(MOTORPWM, 127);
+                if (position < 2000) {
+                    rotateClockwise();
                     delay(1000);
                 }
-                else if (abs(sensors[0] - lineAverage[0]) > 75) {
-                    Serial.println(" DC motor rotate counterclockwise");
-                    digitalWrite(IN1R, LOW);
-                    digitalWrite(IN2R, HIGH);
-                    digitalWrite(IN1L, HIGH);
-                    digitalWrite(IN2L, LOW);
+                else if (position > 4000) {
+                    rotateCounterClockwise();
                     delay(1000);
                 }
                 else {
-                    Serial.println(" DC motor move forward");
-                    digitalWrite(IN1R, LOW);
-                    digitalWrite(IN2R, HIGH);
-                    digitalWrite(IN1L, LOW);
-                    digitalWrite(IN2L, HIGH);
+                    moveForward();
                 }
+            }
+            if (controller->x() && !latchX) {
+                latchX = true;
+                wallAuto = !wallAuto;
+            }
+            else if (!controller->x() && latchX) {
+                latchX = false;
+            }
+            if (!wallAuto && latchX) {
+                wallAuto = false;
+                stop();
+            }
+            if (wallAuto) {
+
             }
         }
     }
