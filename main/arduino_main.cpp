@@ -231,7 +231,6 @@ void loop() {
             }
             Serial.println(latchA);
             if (!lineAuto && latchA) {
-                lineAuto = false;
                 for (int i = 0; i < 5; i++) {
                     lineAverage[i] = 0;
                 }
